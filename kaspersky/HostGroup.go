@@ -528,16 +528,69 @@ func (hg *HostGroup) GetHostInfo(ctx context.Context, params interface{}) ([]byt
 	return raw, err
 }
 
-// GetHostProducts Return information about installed products on the host.
-func (hg *HostGroup) GetHostProducts(ctx context.Context, strHostName string) ([]byte, error) {
-	postData := []byte(fmt.Sprintf(`{"strHostName": "%s"}`, strHostName))
-	request, err := http.NewRequest("POST", hg.client.Server+"/api/v1.0/HostGroup.GetHostProducts", bytes.NewBuffer(postData))
-	if err != nil {
-		return nil, err
-	}
+//DateTimeParams - KSC paramDateTime.
+type DateTimeParams struct {
+	Value string `json:"value"`
+}
 
-	raw, err := hg.client.Do(ctx, request, nil)
-	return raw, err
+// HostProductInfo - host's product info
+type HostProductInfo struct {
+	BaseRecords       int
+	BaseGeneration    int
+	ModuleType        int
+	Name              string
+	Version           string
+	DisplayName       string
+	ProdVersion       string
+	DataFolder        string
+	Folder            string
+	KeyFolder         string
+	FileName          string
+	FilePath          string
+	CustomName        string
+	LocID             string
+	OsName            string
+	OsVersion         string
+	OsRelease         string
+	InstallationId    string
+	InstallTime       DateTimeParams
+	LastUpdateTime    DateTimeParams
+	BaseDate          DateTimeParams
+	AcceptedCmds      []string
+	Tasks             []string
+	TasksComplemented []string
+	Events            []string
+}
+
+// HostProductInfo - host's product info
+type hostProductInfoParams struct {
+	HostProductInfo `json:"value"`
+}
+
+// HostProductVersionParams -
+type hostProductVersionParams struct {
+	Value map[string]hostProductInfoParams `json:"value"`
+}
+
+// GetHostProductsResponse -
+type getHostProductsResponse struct {
+	PxgRetVal map[string]hostProductVersionParams `json:"PxgRetVal"`
+}
+
+// GetHostProducts Return information about installed products on the host.
+func (hg *HostGroup) GetHostProducts(ctx context.Context, hostName string) ([]HostProductInfo, []byte, error) {
+	in := []byte(fmt.Sprintf(`{"strHostName": "%s"}`, hostName))
+	var out getHostProductsResponse
+	raw, err := hg.client.PostInOut(ctx, "/api/v1.0/HostGroup.GetHostProducts", in, &out)
+	var products []HostProductInfo
+	for name, v1 := range out.PxgRetVal {
+		for version, v2 := range v1.Value {
+			v2.HostProductInfo.Name = name
+			v2.HostProductInfo.Version = version
+			products = append(products, v2.HostProductInfo)
+		}
+	}
+	return products, raw, err
 }
 
 // GetHostTasks Return server specific identity to acquire and manage host tasks.
