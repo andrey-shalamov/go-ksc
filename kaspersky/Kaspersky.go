@@ -25,6 +25,7 @@
 package kaspersky
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"crypto/tls"
@@ -33,7 +34,6 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-
 	"net/http"
 )
 
@@ -342,6 +342,44 @@ func (c *Client) KSCTAuth(ctx context.Context, ksct string) error {
 	return err
 }
 
+// PostInOut - POST request with body. out - Expected response struct.
+func (c *Client) PostInOut(ctx context.Context, url string, in interface{}, out interface{}) ([]byte, error) {
+	var reader io.Reader
+	switch in.(type) {
+	case nil:
+	case []byte:
+		reader = (io.Reader)(bytes.NewReader(in.([]byte)))
+	default:
+		data, err := json.Marshal(in)
+		if err != nil {
+			return nil, err
+		}
+		reader = (io.Reader)(bytes.NewReader(data))
+	}
+	request, err := http.NewRequestWithContext(ctx, "POST", c.Server+url, reader)
+	if err != nil {
+		return nil, err
+	}
+	return c.Do(ctx, request, out)
+}
+
+// PostIn - POST request with body and empty response
+func (c *Client) PostIn(ctx context.Context, url string, in interface{}) error {
+	_, err := c.PostInOut(ctx, url, in, nil)
+	return err
+}
+
+// PostOut - POST request without body. out - Expected response struct.
+func (c *Client) PostOut(ctx context.Context, url string, out interface{}) ([]byte, error) {
+	return c.PostInOut(ctx, url, nil, out)
+}
+
+// Post - POST request without body and empty response
+func (c *Client) Post(ctx context.Context, url string) error {
+	_, err := c.PostInOut(ctx, url, nil, nil)
+	return err
+}
+
 func (c *Client) Do(ctx context.Context, req *http.Request, out interface{}) (dt []byte, err error) {
 	if ctx == nil {
 		return nil, errors.New("context must be non-nil")
@@ -360,6 +398,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, out interface{}) (dt
 	req.Header.Set("Accept-Encoding", "gzip")
 
 	resp, err = c.client.Do(req)
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		return nil, errors.New(resp.Status)
+	}
 
 	if err != nil {
 		select {
