@@ -406,15 +406,36 @@ func (hg *HostGroup) GetDomainHosts(ctx context.Context, domain string) ([]byte,
 	return raw, err
 }
 
-// GetDomains List of Windows domain in the network.
-func (hg *HostGroup) GetDomains(ctx context.Context) ([]byte, error) {
-	request, err := http.NewRequest("POST", hg.client.Server+"/api/v1.0/HostGroup.GetDomains", nil)
-	if err != nil {
-		return nil, err
-	}
+// WindowsDomainType - domain type:
+type WindowsDomainType int
 
-	raw, err := hg.client.Do(ctx, request, nil)
-	return raw, err
+// 0 - Windows NT domain
+// 1 - Windows work group
+const (
+	WindowsNTDomain WindowsDomainType = iota
+	WindowsWorkGroup
+)
+
+// Domain - Windows domain info
+type Domain struct {
+	Name string            `json:"KLHST_WKS_WINDOMAIN,omitempty"`
+	Type WindowsDomainType `json:"KLHST_WKS_WINDOMAIN_TYPE,omitempty"`
+}
+
+// DomainParams - Windows domain info
+type DomainParams struct {
+	Domain `json:"value,omitempty"`
+}
+
+type domains struct {
+	Domains []DomainParams `json:"PxgRetVal,omitempty"`
+}
+
+// GetDomains List of Windows domain in the network.
+func (hg *HostGroup) GetDomains(ctx context.Context) ([]DomainParams, error) {
+	out := new(domains)
+	_, err := hg.client.PostOut(ctx, "/api/v1.0/HostGroup.GetDomains", &out)
+	return out.Domains, err
 }
 
 // GetGroupId Acquire administration group id by its name and id of parent group.
