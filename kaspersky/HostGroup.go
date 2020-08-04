@@ -432,10 +432,10 @@ type domains struct {
 }
 
 // GetDomains List of Windows domain in the network.
-func (hg *HostGroup) GetDomains(ctx context.Context) ([]DomainParams, error) {
+func (hg *HostGroup) GetDomains(ctx context.Context) ([]DomainParams, []byte, error) {
 	out := new(domains)
-	_, err := hg.client.PostOut(ctx, "/api/v1.0/HostGroup.GetDomains", &out)
-	return out.Domains, err
+	raw, err := hg.client.PostOut(ctx, "/api/v1.0/HostGroup.GetDomains", &out)
+	return out.Domains, raw, err
 }
 
 // GetGroupId Acquire administration group id by its name and id of parent group.
