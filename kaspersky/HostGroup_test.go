@@ -22,17 +22,31 @@ func expectEqual(t *testing.T, expected interface{}, actual interface{}) {
 	}
 }
 
-func NewTestServer(url string, response string) *httptest.Server {
-	handleFunc := func(w http.ResponseWriter, r *http.Request) {
+func NewTestServer() (*httptest.Server, *http.ServeMux) {
+	handler := http.NewServeMux()
+	srv := httptest.NewServer(handler)
+	return srv, handler
+}
+
+func TestHostGroup(t *testing.T) {
+	srv, handler := NewTestServer()
+	defer srv.Close()
+
+	ctx := context.Background()
+	client := kaspersky.New(kaspersky.Config{Server: srv.URL})
+
+	t.Run("GetDomains", func(t *testing.T) { getDomains(t, ctx, handler, client) })
+	t.Run("GetHostProducts", func(t *testing.T) { getHostProducts(t, ctx, handler, client) })
+}
+
+func HandlerFuncOk(response string) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(response))
 	}
-	handler := http.NewServeMux()
-	handler.HandleFunc(url, handleFunc)
-	return httptest.NewServer(handler)
 }
 
-func TestHostGroupGetDomains(t *testing.T) {
+func getDomains(t *testing.T, ctx context.Context, handler *http.ServeMux, client *kaspersky.Client) {
 	response := `{
 		"PxgRetVal": [
 		  {
@@ -51,12 +65,9 @@ func TestHostGroupGetDomains(t *testing.T) {
 		  }
 		]
 	  }`
-	srv := NewTestServer("/api/v1.0/HostGroup.GetDomains", response)
-	defer srv.Close()
+	handler.HandleFunc("/api/v1.0/HostGroup.GetDomains", HandlerFuncOk(response))
 
-	ctx := context.Background()
-	client := kaspersky.New(kaspersky.Config{Server: srv.URL})
-	actual, err := client.HostGroup.GetDomains(ctx)
+	actual, _, err := client.HostGroup.GetDomains(ctx)
 	expectSucceeded(t, err)
 
 	expected := []kaspersky.DomainParams{
@@ -76,7 +87,7 @@ func TestHostGroupGetDomains(t *testing.T) {
 	expectEqual(t, expected, actual)
 }
 
-func TestHostGroupGetHostProducts(t *testing.T) {
+func getHostProducts(t *testing.T, ctx context.Context, handler *http.ServeMux, client *kaspersky.Client) {
 	response := `{
 		"PxgRetVal": {
 		  "KES": {
@@ -108,10 +119,8 @@ func TestHostGroupGetHostProducts(t *testing.T) {
 		}
 	  }
 	`
-	srv := NewTestServer("/api/v1.0/HostGroup.GetHostProducts", response)
-	defer srv.Close()
-	ctx := context.Background()
-	client := kaspersky.New(kaspersky.Config{Server: srv.URL})
+	handler.HandleFunc("/api/v1.0/HostGroup.GetHostProducts", HandlerFuncOk(response))
+
 	actual, _, err := client.HostGroup.GetHostProducts(ctx, "host")
 	expectSucceeded(t, err)
 
