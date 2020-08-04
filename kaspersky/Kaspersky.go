@@ -399,10 +399,6 @@ func (c *Client) Do(ctx context.Context, req *http.Request, out interface{}) (dt
 
 	resp, err = c.client.Do(req)
 
-	if resp.StatusCode >= http.StatusBadRequest {
-		return nil, errors.New(resp.Status)
-	}
-
 	if err != nil {
 		select {
 		case <-ctx.Done():
@@ -411,6 +407,10 @@ func (c *Client) Do(ctx context.Context, req *http.Request, out interface{}) (dt
 		}
 
 		return nil, err
+	}
+
+	if resp.StatusCode >= http.StatusBadRequest {
+		return nil, errors.New(resp.Status)
 	}
 
 	defer resp.Body.Close()
