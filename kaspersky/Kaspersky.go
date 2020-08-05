@@ -364,9 +364,8 @@ func (c *Client) PostInOut(ctx context.Context, url string, in interface{}, out 
 }
 
 // PostIn - POST request with body and empty response
-func (c *Client) PostIn(ctx context.Context, url string, in interface{}) error {
-	_, err := c.PostInOut(ctx, url, in, nil)
-	return err
+func (c *Client) PostIn(ctx context.Context, url string, in interface{}) ([]byte, error) {
+	return c.PostInOut(ctx, url, in, nil)
 }
 
 // PostOut - POST request without body. out - Expected response struct.
@@ -375,12 +374,11 @@ func (c *Client) PostOut(ctx context.Context, url string, out interface{}) ([]by
 }
 
 // Post - POST request without body and empty response
-func (c *Client) Post(ctx context.Context, url string) error {
-	_, err := c.PostInOut(ctx, url, nil, nil)
-	return err
+func (c *Client) Post(ctx context.Context, url string) ([]byte, error) {
+	return c.PostInOut(ctx, url, nil, nil)
 }
 
-func (c *Client) Do(ctx context.Context, req *http.Request, out interface{}) (dt []byte, err error) {
+func (c *Client) Do(ctx context.Context, req *http.Request, out interface{}) ([]byte, error) {
 	if ctx == nil {
 		return nil, errors.New("context must be non-nil")
 	}
@@ -397,7 +395,7 @@ func (c *Client) Do(ctx context.Context, req *http.Request, out interface{}) (dt
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept-Encoding", "gzip")
 
-	resp, err = c.client.Do(req)
+	resp, err := c.client.Do(req)
 
 	if err != nil {
 		select {
