@@ -601,6 +601,14 @@ func (hg *HostGroup) SSCreateSection(ctx context.Context, params SectionParams) 
 	return hg.client.PostIn(ctx, "/api/v1.0/HostGroup.SS_CreateSection", params)
 }
 
+// SSDeleteSection Delete section from host settings storage.
+// If strSection is empty string then all sections like {strProduct, strVersion, *} will be deleted.
+// If strSection and strVersion are empty strings then all sections like {strProduct, *, *} will be deleted.
+// If strProduct, strVersion and strSection are empty strings then all sections in the storage will be deleted.
+func (hg *HostGroup) SSDeleteSection(ctx context.Context, params SectionParams) ([]byte, error) {
+	return hg.client.PostIn(ctx, "/api/v1.0/HostGroup.SS_DeleteSection", params)
+}
+
 // SSWrite Write data to host settings storage.
 func (hg *HostGroup) SSWrite(ctx context.Context, params SectionParams) ([]byte, error) {
 	return hg.client.PostIn(ctx, "/api/v1.0/HostGroup.SS_Write", params)
